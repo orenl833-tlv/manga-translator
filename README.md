@@ -1,6 +1,5 @@
 
 
-Uploading translation example.mp4…
 
 # Manga Translator
 
@@ -9,7 +8,9 @@ and draws the translation back onto each page, in place of the original
 lettering.
 
 <!-- Replace with a GIF or a link to the demo video -->
-> 🎬 **Demo:** _add the 20-second demo video / GIF here_
+> 🎬 **
+https://github.com/user-attachments/assets/f14f4c3e-f020-4cba-8f0f-207f78c2a7fc
+:** _add the 20-second demo video / GIF here_
 
 ## Why I built it
 
