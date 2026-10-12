@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Batch {{ batch['id'] }} — Manga Translator</title>
+  <link rel="stylesheet" href="{{ static_url('style.css') }}">
+</head>
+<body data-batch-id="{{ batch['id'] }}" data-batch-status="{{ batch['status'] }}">
+  <header>
+    <h1><a href="/">Manga Translator</a></h1>
+    <p class="sub">
+      Batch <code>{{ batch['id'] }}</code> &middot; target language: <strong>{{ batch['target_lang'] }}</strong>
+      &middot; status: <span class="status status-{{ batch['status'] }}" id="status-badge">{{ batch['status'] }}</span>
+    </p>
+  </header>
+
+  <main>
+    {% if batch['status'] == 'error' %}
+      <section class="card error-card">
+        <h2>Something went wrong</h2>
+        <pre>{{ batch['error'] }}</pre>
+        <form action="/batches/{{ batch['id'] }}/translate" method="post">
+          <button type="submit">Retry translation</button>
+        </form>
+      </section>
+    {% endif %}
+
+    {% if batch['status'] in ('draft', 'error') %}
+      <section class="card">
+        <h2>Reading order</h2>
+        <p class="muted">
+          Pages were auto-sorted by filename. Manga reads right-to-left,
+          top-to-bottom within a page — double check the page order itself
+          is right before translating (auto-numbering from filenames can be
+          wrong).
+        </p>
+        <ol class="page-order-list">
+          {% for page, lines in pages_with_lines %}
+            <li data-page-id="{{ page['id'] }}">
+              <img class="thumb" src="/pages/{{ page['id'] }}/original" alt="{{ page['filename'] }}">
+              <span class="filename">{{ page['filename'] }}</span>
+              <span class="move-buttons">
+                <button type="button" class="move-up" title="Move up">&uarr;</button>
+                <button type="button" class="move-down" title="Move down">&darr;</button>
+              </span>
+            </li>
+          {% endfor %}
+        </ol>
+        <form action="/batches/{{ batch['id'] }}/translate" method="post">
+          <button type="submit">Start translation ({{ pages_with_lines|length }} pages)</button>
+        </form>
+      </section>
+    {% endif %}
+
+    {% if batch['status'] in ('queued', 'processing') %}
+      <section class="card">
+        <h2>Translating&hellip;</h2>
+        <p class="muted" id="status-text">
+          Detecting text lines, running OCR, and translating with full-batch
+          context. This page refreshes automatically.
+        </p>
+      </section>
+    {% endif %}
+
+    {% if batch['status'] == 'done' %}
+      <section class="card">
+        <h2>Result</h2>
+        {% if batch['glossary_json'] and batch['glossary_json'] != '[]' %}
+          <details class="glossary">
+            <summary>Glossary / consistency notes used across this batch</summary>
+            <pre>{{ batch['glossary_json'] }}</pre>
+          </details>
+        {% endif %}
+        <button type="button" id="reader-open" class="reader-open">Read pages &rarr;</button>
+        <div class="pages-grid" data-pages="{{ page_ids | to_json }}">
+          {% for page, lines in pages_with_lines %}
+            <figure class="page-figure">
+              <img class="page-image toggle-img" data-page-id="{{ page['id'] }}"
+                   src="/pages/{{ page['id'] }}/translated" alt="{{ page['filename'] }}">
+              <figcaption>
+                {{ page['filename'] }}
+                <button type="button" class="toggle-original">show original</button>
+                <a class="debug-link" href="/pages/{{ page['id'] }}/debug" target="_blank"
+                   title="Every detected line's real bbox/color/OCR text/translation as JSON — attach this if a render looks wrong">debug info</a>
+              </figcaption>
+              {% if lines %}
+                <details class="correct-lines">
+                  <summary>correct a line ({{ lines|length }})</summary>
+                  {% for line in lines %}
+                    {% set cur = current_boxes.get(line['id'], {}) %}
+                    <div class="correct-line" data-line-id="{{ line['id'] }}" data-page-id="{{ page['id'] }}">
+                      <div class="correct-line-main">
+                        <span class="correct-line-source" title="original OCR text">{{ line['source_text'] or '' }}</span>
+                        <input type="text" class="correct-line-input" value="{{ line['translated_text'] or '' }}">
+                        <button type="button" class="correct-line-save">Save</button>
+                      </div>
+                      <div class="correct-line-style">
+                        <label>font size
+                          <input type="number" class="style-font-size" min="6" max="80"
+                                 data-auto="{{ cur.get('font_size', '') if cur.get('font_size') is not none else '' }}"
+                                 value="{{ line['manual_font_size'] if line['manual_font_size'] is not none else (cur.get('font_size', '') if cur.get('font_size') is not none else '') }}">
+                        </label>
+                        <label>background
+                          <input type="color" class="style-fill-color" value="{{ line['fill_color']|rgb_hex }}">
+                        </label>
+                        <label>text
+                          <input type="color" class="style-text-color" value="{{ line['text_color']|rgb_hex }}">
+                        </label>
+                        <label>x
+                          <input type="number" class="style-x" data-auto="{{ cur.get('x', '') }}"
+                                 value="{{ line['manual_x'] if line['manual_x'] is not none else cur.get('x', '') }}">
+                        </label>
+                        <label>y
+                          <input type="number" class="style-y" data-auto="{{ cur.get('y', '') }}"
+                                 value="{{ line['manual_y'] if line['manual_y'] is not none else cur.get('y', '') }}">
+                        </label>
+                        <label>width
+                          <input type="number" class="style-w" data-auto="{{ cur.get('w', '') }}"
+                                 value="{{ line['manual_w'] if line['manual_w'] is not none else cur.get('w', '') }}">
+                        </label>
+                        <label>height
+                          <input type="number" class="style-h" data-auto="{{ cur.get('h', '') }}"
+                                 value="{{ line['manual_h'] if line['manual_h'] is not none else cur.get('h', '') }}">
+                        </label>
+                        <button type="button" class="style-reset-box"
+                                title="Reset x/y/width/height/font size back to automatic (shown values are the current automatic layout)">reset position/size</button>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </details>
+              {% endif %}
+            </figure>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </main>
+
+  <div id="reader-overlay" class="reader-overlay" hidden>
+    <button type="button" id="reader-close" class="reader-close" title="Close (Esc)">&times;</button>
+    <!-- Applies to every page you flip to while open, not just the one shown
+         when you click it — see app.js's showingOriginal state. -->
+    <button type="button" id="reader-toggle-original" class="reader-toggle-original">show original</button>
+    <!-- Manga reads right-to-left: the left button/key advances (next page),
+         the right button/key goes back — see app.js for the full rationale. -->
+    <button type="button" id="reader-left" class="reader-nav reader-left" title="Next page (&larr;)">&larr;</button>
+    <div class="reader-viewport">
+      <img id="reader-image" class="reader-image" alt="" draggable="false">
+    </div>
+    <button type="button" id="reader-right" class="reader-nav reader-right" title="Previous page (&rarr;)">&rarr;</button>
+    <div id="reader-counter" class="reader-counter"></div>
+  </div>
+
+  <script src="{{ static_url('app.js') }}"></script>
+</body>
+</html>

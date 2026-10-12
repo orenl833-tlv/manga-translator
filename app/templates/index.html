@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Manga Translator</title>
+  <link rel="stylesheet" href="{{ static_url('style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Manga Translator</h1>
+    <p class="sub">Upload a batch of pages, confirm the reading order, pick a target language.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>New batch</h2>
+      <form action="/batches" method="post" enctype="multipart/form-data">
+        <label class="field">
+          <span>Page images</span>
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="file-input" name="files" multiple accept="image/*" required>
+            <p class="dropzone-hint">You can also just paste an image (Ctrl+V) anywhere on this page.</p>
+            <div class="file-chip-row" id="file-chips"></div>
+          </div>
+        </label>
+        <label class="field">
+          <span>Target language</span>
+          <select name="target_lang">
+            <option value="English">English</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Portuguese">Portuguese</option>
+            <option value="Hebrew">Hebrew</option>
+            <option value="Korean">Korean</option>
+            <option value="Chinese (Simplified)">Chinese (Simplified)</option>
+          </select>
+        </label>
+        <button type="submit">Upload</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Batches</h2>
+      {% if not batches %}
+        <p class="muted">No batches yet.</p>
+      {% else %}
+        <ul class="batch-list">
+          {% for b in batches %}
+            <li>
+              <a href="/batches/{{ b['id'] }}">
+                <span class="status status-{{ b['status'] }}">{{ b['status'] }}</span>
+                {{ b['id'] }} &rarr; {{ b['target_lang'] }}
+                <span class="muted">{{ b['created_at'] }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  </main>
+
+  <script src="{{ static_url('upload.js') }}"></script>
+</body>
+</html>

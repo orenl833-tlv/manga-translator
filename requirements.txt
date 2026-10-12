@@ -1,0 +1,41 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+jinja2>=3.1
+pillow>=10.0
+opencv-python-headless>=4.9
+numpy>=1.26
+anthropic>=1.0
+
+# Optional second translation provider — only imported if TRANSLATION_PROVIDER=openai
+# (see app/config.py). Harmless to leave installed either way.
+openai>=1.0
+
+# OCR — self-hosted, downloads its model from Hugging Face on first use
+# (needs outbound network once; after that it's fully offline). Pulls in
+# torch, so this and the package below are the heaviest deps here — both
+# auto-use a GPU if `torch.cuda.is_available()`, and fall back to CPU
+# (slower, still correct) otherwise.
+manga-ocr>=0.1.14
+
+# Text-line detection — a trained neural detector (CRAFT), not a classical-
+# CV heuristic. Finds precise per-line boxes directly (by their strokes),
+# which is what render.py fills with a flat color block and draws the
+# translation into — the same category of model (CRAFT/EAST-class) behind
+# e.g. Google Translate's live camera-translate overlay, and the one part
+# of this app's local pipeline that stayed reliable across every rendering
+# rework in its history; see detection.py's module docstring.
+#
+# This is EasyOCR, used detection-only (detection.py never touches its
+# recognizer) — it's the maintained path to CRAFT. The standalone
+# `craft-text-detector` PyPI package was tried first and confirmed, by
+# hand, to no longer load on current torch/torchvision (an unmaintained
+# package — last released 2022 — importing a torchvision internal that no
+# longer exists); EasyOCR vendors and maintains the same detector.
+easyocr>=1.7
+
+# No inpainting model here. This app used to run one (LaMa) to reconstruct
+# a bubble's fill after erasing its text; the current design instead fills
+# each detected line's box with a flat, sampled color — simpler, and it's
+# genuinely what Google Translate's own overlay does too (verified, not
+# assumed), not a corner cut. See render.py.
