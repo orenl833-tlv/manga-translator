@@ -1,3 +1,7 @@
+
+
+Uploading translation example.mp4…
+
 # Manga Translator
 
 A self-hosted web app that translates whole batches of manga pages at once
